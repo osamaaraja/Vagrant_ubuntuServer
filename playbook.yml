@@ -1,0 +1,82 @@
+---
+
+- name: Setup Ubuntu server and install Docker  		
+  hosts: all
+   
+  become: yes  # executing the tasks with sudo privileges
+  
+  ######################################################################################################
+
+  tasks:
+
+  ######################################################################################################
+
+    - name: Update ad upgrade apt packages  # task description
+      apt:  # managing pakcages using the 'apt' package manager 
+        update_cache: yes # refreshing the packages database before making changes 
+        upgrade: dist # upgrades all installed packages
+
+    - name: Install Docker and Docker Compose 
+      apt: # using apt since the task would be using it
+        name: # contains the list of the packages to be installed 
+          - docker.io
+          - docker-compose-v2 
+          - petname 
+        state: latest # updating the packages to the latest version 
+
+    - name: Start and enable Docker service
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add user to the Docker group
+      user:
+        name: "{{ansible_env.USER}}" # the name under which Ansible connects to the remote machine
+        groups: docker # adding user to the docker group
+        append: yes # this is done to ensure that the user is added to the docker without being removed from any other group
+
+    ######################################################################################################
+
+    # VERFIFICATION STEPS
+
+    ######################################################################################################
+
+    - name: logout and login
+      meta: reset_connection # this is as close as it gets to logout and then login
+
+    - name: Wait for Docker service to be fully up
+      pause:
+        seconds: 10
+
+    - name: Run Docker to verify installation 
+      command: docker run hello-world
+      register: hello_world_output
+
+    - name: get Docker version 
+      command: docker --version 
+      register: docker_version
+
+    - name: get Docker compose version 
+      command: docker compose --version 
+      register: docker_compose_version
+
+    - name: print versions
+      debug:
+        msg: 
+          - "Docker Test Output: {{hello_world_output.stdout}}" # testing the output
+          - "Docker Version: {{docker_version.stdout}}" # checking the docker version
+          - "Docker Compose Version: {{docker_compose_version.stdout}}" # checking the compose version
+
+    ######################################################################################################
+
+    # UPON SUCCESSFUL EXECUTION 
+
+    ######################################################################################################
+
+    - name: End of all installations 
+      debug:
+        msg: "Tasks completed successfully!"
+    
+
+
